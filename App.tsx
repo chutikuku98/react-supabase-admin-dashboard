@@ -1,5 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Sidebar } from './components/Sidebar';
 import { Navbar } from './components/Navbar';
 import { DashboardHome } from './pages/DashboardHome';
@@ -8,6 +9,17 @@ import { ProductPage } from './pages/ProductPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { SettingsPage } from './pages/SettingsPage';
 
+// React Query client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
 const App: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem('theme') === 'dark';
@@ -15,7 +27,6 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
   
-  // Customization points
   const [dashboardTitle, setDashboardTitle] = useState('Nexus Admin');
   const [logoColor, setLogoColor] = useState('text-primary-600');
 
@@ -33,38 +44,41 @@ const App: React.FC = () => {
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors duration-200">
-      <Sidebar 
-        isOpen={isSidebarOpen} 
-        setIsOpen={setIsSidebarOpen} 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab}
-        title={dashboardTitle}
-        logoColor={logoColor}
-      />
-      
-      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-20'}`}>
-        <Navbar 
-          toggleDarkMode={toggleDarkMode} 
-          isDarkMode={isDarkMode} 
-          toggleSidebar={toggleSidebar}
-          isSidebarOpen={isSidebarOpen}
+    <QueryClientProvider client={queryClient}>
+      <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors duration-200">
+        <Sidebar 
+          isOpen={isSidebarOpen} 
+          setIsOpen={setIsSidebarOpen} 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab}
+          title={dashboardTitle}
+          logoColor={logoColor}
         />
         
-        <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto">
-          {activeTab === 'dashboard' && <DashboardHome />}
-          {activeTab === 'users' && <UserManagement />}
-          {activeTab === 'products' && <ProductPage />}
-          {activeTab === 'analytics' && <AnalyticsPage />}
-          {activeTab === 'settings' && (
-            <SettingsPage 
-              dashboardTitle={dashboardTitle} 
-              setDashboardTitle={setDashboardTitle} 
-            />
-          )}
-        </main>
+        <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-20'}`}>
+          <Navbar 
+            toggleDarkMode={toggleDarkMode} 
+            isDarkMode={isDarkMode} 
+            toggleSidebar={toggleSidebar}
+            isSidebarOpen={isSidebarOpen}
+          />
+          
+          <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto">
+            {activeTab === 'dashboard' && <DashboardHome />}
+            {activeTab === 'users' && <UserManagement />}
+            {activeTab === 'products' && <ProductPage />}
+            {activeTab === 'analytics' && <AnalyticsPage />}
+            {activeTab === 'settings' && (
+              <SettingsPage 
+                dashboardTitle={dashboardTitle} 
+                setDashboardTitle={setDashboardTitle} 
+              />
+            )}
+          </main>
+        </div>
       </div>
-    </div>
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
   );
 };
 
