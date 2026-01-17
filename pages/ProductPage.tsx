@@ -21,50 +21,103 @@ export const ProductPage: React.FC = () => {
     productId: null,
   });
 
-  // Fetch products
   const { data: products = [], isLoading, error } = useQuery({
     queryKey: ['products'],
     queryFn: fetchProducts,
   });
 
-  // Create mutation
+  // ⬇️ OPTIMISTIC CREATE - UI instantly updates
   const createMutation = useMutation({
     mutationFn: createProduct,
+    onMutate: async (newProduct) => {
+      // Cancel outgoing queries
+      await queryClient.cancelQueries({ queryKey: ['products'] });
+      
+      // Snapshot previous value
+      const previousProducts = queryClient.getQueryData<Product[]>(['products']);
+      
+      // Optimistically update with temporary ID
+      const tempProduct: Product = {
+        id: 'temp-' + Date.now(),
+        ...newProduct,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      
+      queryClient.setQueryData<Product[]>(['products'], old => 
+        [tempProduct, ...(old || [])]
+      );
+      
+      return { previousProducts };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
       setIsFormOpen(false);
       setEditingProduct(null);
       toast.success('Product created successfully!');
     },
-    onError: (error: Error) => {
+    onError: (error: Error, newProduct, context) => {
+      // Rollback on error
+      queryClient.setQueryData(['products'], context?.previousProducts);
       toast.error(`Failed to create product: ${error.message}`);
+    },
+    onSettled: () => {
+      // Refetch to get real data with correct ID
+      queryClient.invalidateQueries({ queryKey: ['products'] });
     },
   });
 
-  // Update mutation
+  // ⬇️ OPTIMISTIC UPDATE - UI instantly updates
   const updateMutation = useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: Partial<Product> }) =>
       updateProduct(id, updates),
+    onMutate: async ({ id, updates }) => {
+      await queryClient.cancelQueries({ queryKey: ['products'] });
+      
+      const previousProducts = queryClient.getQueryData<Product[]>(['products']);
+      
+      queryClient.setQueryData<Product[]>(['products'], old =>
+        old?.map(p => p.id === id ? { ...p, ...updates } : p) || []
+      );
+      
+      return { previousProducts };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
       setIsFormOpen(false);
       setEditingProduct(null);
       toast.success('Product updated successfully!');
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables, context) => {
+      queryClient.setQueryData(['products'], context?.previousProducts);
       toast.error(`Failed to update product: ${error.message}`);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
     },
   });
 
-  // Delete mutation
+  // ⬇️ OPTIMISTIC DELETE - UI instantly updates
   const deleteMutation = useMutation({
     mutationFn: deleteProduct,
+    onMutate: async (productId) => {
+      await queryClient.cancelQueries({ queryKey: ['products'] });
+      
+      const previousProducts = queryClient.getQueryData<Product[]>(['products']);
+      
+      queryClient.setQueryData<Product[]>(['products'], old =>
+        old?.filter(p => p.id !== productId) || []
+      );
+      
+      return { previousProducts };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
       toast.success('Product deleted successfully!');
     },
-    onError: (error: Error) => {
+    onError: (error: Error, productId, context) => {
+      queryClient.setQueryData(['products'], context?.previousProducts);
       toast.error(`Failed to delete product: ${error.message}`);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
     },
   });
 

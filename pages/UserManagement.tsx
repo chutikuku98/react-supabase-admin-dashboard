@@ -26,43 +26,91 @@ export const UserManagement: React.FC = () => {
   });
 
   // ⬇️ UPDATE මේ mutations 3ම
-  const createMutation = useMutation({
-    mutationFn: createUser,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      setIsFormOpen(false);
-      setEditingUser(null);
-      toast.success('User created successfully!');
-    },
-    onError: (error: Error) => {
-      toast.error(`Failed to create user: ${error.message}`);
-    },
-  });
+ const createMutation = useMutation({
+  mutationFn: createUser,
+  onMutate: async (newUser) => {
+    await queryClient.cancelQueries({ queryKey: ['users'] });
+    const previousUsers = queryClient.getQueryData<User[]>(['users']);
+    
+    const tempUser: User = {
+      id: 'temp-' + Date.now(),
+      email: newUser.email,
+      full_name: newUser.full_name,
+      role: newUser.role,
+      status: newUser.status || 'Active',
+      avatar_url: newUser.avatar_url || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    
+    queryClient.setQueryData<User[]>(['users'], old => [tempUser, ...(old || [])]);
+    return { previousUsers };
+  },
+  onSuccess: () => {
+    setIsFormOpen(false);
+    setEditingUser(null);
+    toast.success('User created successfully!');
+  },
+  onError: (error: Error, newUser, context) => {
+    queryClient.setQueryData(['users'], context?.previousUsers);
+    toast.error(`Failed to create user: ${error.message}`);
+  },
+  onSettled: () => {
+    queryClient.invalidateQueries({ queryKey: ['users'] });
+  },
+});
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: Partial<User> }) =>
-      updateUser(id, updates),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      setIsFormOpen(false);
-      setEditingUser(null);
-      toast.success('User updated successfully!');
-    },
-    onError: (error: Error) => {
-      toast.error(`Failed to update user: ${error.message}`);
-    },
-  });
+
+ const updateMutation = useMutation({
+  mutationFn: ({ id, updates }: { id: string; updates: Partial<User> }) =>
+    updateUser(id, updates),
+  onMutate: async ({ id, updates }) => {
+    await queryClient.cancelQueries({ queryKey: ['users'] });
+    const previousUsers = queryClient.getQueryData<User[]>(['users']);
+    
+    queryClient.setQueryData<User[]>(['users'], old =>
+      old?.map(u => u.id === id ? { ...u, ...updates } : u) || []
+    );
+    
+    return { previousUsers };
+  },
+  onSuccess: () => {
+    setIsFormOpen(false);
+    setEditingUser(null);
+    toast.success('User updated successfully!');
+  },
+  onError: (error: Error, variables, context) => {
+    queryClient.setQueryData(['users'], context?.previousUsers);
+    toast.error(`Failed to update user: ${error.message}`);
+  },
+  onSettled: () => {
+    queryClient.invalidateQueries({ queryKey: ['users'] });
+  },
+});
 
   const deleteMutation = useMutation({
-    mutationFn: deleteUser,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast.success('User deleted successfully!');
-    },
-    onError: (error: Error) => {
-      toast.error(`Failed to delete user: ${error.message}`);
-    },
-  });
+  mutationFn: deleteUser,
+  onMutate: async (userId) => {
+    await queryClient.cancelQueries({ queryKey: ['users'] });
+    const previousUsers = queryClient.getQueryData<User[]>(['users']);
+    
+    queryClient.setQueryData<User[]>(['users'], old =>
+      old?.filter(u => u.id !== userId) || []
+    );
+    
+    return { previousUsers };
+  },
+  onSuccess: () => {
+    toast.success('User deleted successfully!');
+  },
+  onError: (error: Error, userId, context) => {
+    queryClient.setQueryData(['users'], context?.previousUsers);
+    toast.error(`Failed to delete user: ${error.message}`);
+  },
+  onSettled: () => {
+    queryClient.invalidateQueries({ queryKey: ['users'] });
+  },
+});
 
   // Rest of the code remains same...
   const filteredUsers = users.filter(
