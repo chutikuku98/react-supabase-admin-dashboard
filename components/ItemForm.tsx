@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { User } from '../types';
 import { X } from 'lucide-react';
@@ -12,7 +11,7 @@ interface ItemFormProps {
 
 export const ItemForm: React.FC<ItemFormProps> = ({ user, onClose, onSubmit, isViewOnly = false }) => {
   const [formData, setFormData] = useState({
-    name: user?.name || '',
+    name: user?.full_name || '',  // ⬅️ මෙතන change එක
     email: user?.email || '',
     role: user?.role || 'User',
     status: user?.status || 'Active',

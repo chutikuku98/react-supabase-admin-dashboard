@@ -1,35 +1,61 @@
-
 import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { DataTable } from '../components/DataTable';
 import { ItemForm } from '../components/ItemForm';
 import { EmptyState } from '../components/EmptyState';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { User } from '../types';
-import { Search, Plus, Filter, Download, Eye } from 'lucide-react';
-
-const initialUsers: User[] = [
-  { id: '1', name: 'John Doe', email: 'john@example.com', role: 'Admin', status: 'Active', avatar: 'https://picsum.photos/seed/john/100/100' },
-  { id: '2', name: 'Jane Smith', email: 'jane@example.com', role: 'Editor', status: 'Pending', avatar: 'https://picsum.photos/seed/jane/100/100' },
-  { id: '3', name: 'Mike Ross', email: 'mike@example.com', role: 'User', status: 'Active', avatar: 'https://picsum.photos/seed/mike/100/100' },
-  { id: '4', name: 'Rachel Zane', email: 'rachel@example.com', role: 'Editor', status: 'Inactive', avatar: 'https://picsum.photos/seed/rachel/100/100' },
-];
+import { Search, Plus, Filter, Download, AlertCircle } from 'lucide-react';
+import { fetchUsers, createUser, updateUser, deleteUser } from '../lib/api/users';
 
 export const UserManagement: React.FC = () => {
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  const queryClient = useQueryClient();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isViewMode, setIsViewMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Delete State
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; userId: string | null }>({
     isOpen: false,
     userId: null,
   });
 
-  const filteredUsers = users.filter(user => 
-    user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+  // Fetch users from database
+  const { data: users = [], isLoading, error } = useQuery({
+    queryKey: ['users'],
+    queryFn: fetchUsers,
+  });
+
+  // Create user mutation
+  const createMutation = useMutation({
+    mutationFn: createUser,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setIsFormOpen(false);
+    },
+  });
+
+  // Update user mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: Partial<User> }) =>
+      updateUser(id, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setIsFormOpen(false);
+    },
+  });
+
+  // Delete user mutation
+  const deleteMutation = useMutation({
+    mutationFn: deleteUser,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+
+  const filteredUsers = users.filter(
+    (user) =>
+      user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleEdit = (user: User) => {
@@ -50,37 +76,66 @@ export const UserManagement: React.FC = () => {
 
   const handleConfirmDelete = () => {
     if (deleteConfirm.userId) {
-      setUsers(users.filter(u => u.id !== deleteConfirm.userId));
+      deleteMutation.mutate(deleteConfirm.userId);
     }
+    setDeleteConfirm({ isOpen: false, userId: null });
   };
 
   const handleSubmit = (userData: any) => {
     if (editingUser) {
-      setUsers(users.map(u => u.id === editingUser.id ? { ...u, ...userData } : u));
+      updateMutation.mutate({
+        id: editingUser.id,
+        updates: {
+          email: userData.email,
+          full_name: userData.name,
+          role: userData.role,
+          status: userData.status,
+        },
+      });
     } else {
-      const newUser: User = {
-        id: Math.random().toString(36).substr(2, 9),
-        ...userData,
-        avatar: `https://picsum.photos/seed/${userData.name}/100/100`
-      };
-      setUsers([newUser, ...users]);
+      createMutation.mutate({
+        email: userData.email,
+        full_name: userData.name,
+        role: userData.role,
+        status: userData.status || 'Active',
+        avatar_url: `https://picsum.photos/seed/${userData.name}/100/100`,
+      });
     }
-    setIsFormOpen(false);
-    setEditingUser(null);
   };
 
-  // Add a "View" button to the existing table data by overriding or just wrapping the table component.
-  // Since DataTable is a component, we could pass additional actions or just update it.
-  // For simplicity and adherence to "don't change others features", let's use the standard DataTable 
-  // and maybe add a View icon inside its map if we were to edit DataTable.tsx.
-  // Let's modify the DataTable slightly to include View.
-  
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <AlertCircle className="w-12 h-12 text-rose-500" />
+        <p className="text-slate-600 dark:text-slate-400">Error loading users</p>
+        <button
+          onClick={() => queryClient.invalidateQueries({ queryKey: ['users'] })}
+          className="px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">User Management</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Manage platform users and their permissions.</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">
+            Manage platform users and their permissions.
+          </p>
         </div>
         <button
           onClick={() => {
@@ -96,7 +151,6 @@ export const UserManagement: React.FC = () => {
       </div>
 
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-        {/* Table Controls */}
         <div className="p-4 md:p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="relative max-w-sm w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -118,73 +172,12 @@ export const UserManagement: React.FC = () => {
           </div>
         </div>
 
-        {/* Table Content */}
         {filteredUsers.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                  <th className="px-6 py-4 rounded-tl-xl">User</th>
-                  <th className="px-6 py-4">Role</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-right rounded-tr-xl">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full border border-slate-100 dark:border-slate-600" />
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900 dark:text-white">{user.name}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">{user.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-slate-600 dark:text-slate-300">{user.role}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide
-                        ${user.status === 'Active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : ''}
-                        ${user.status === 'Inactive' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' : ''}
-                        ${user.status === 'Pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : ''}
-                      `}>
-                        {user.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button 
-                          onClick={() => handleView(user)}
-                          className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-all"
-                        >
-                          <Eye size={16} />
-                        </button>
-                        <button 
-                          onClick={() => handleEdit(user)}
-                          className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-all"
-                        >
-                          <Search size={16} /> {/* Using Search as generic "inspect" icon as per requirements */}
-                        </button>
-                        <button 
-                          onClick={() => requestDelete(user.id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-all"
-                        >
-                          <Plus className="rotate-45" size={16} /> {/* Plus rotate 45 is basically X / Trash substitute */}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable data={filteredUsers} onEdit={handleEdit} onDelete={requestDelete} />
         ) : (
-          <EmptyState 
-            title="No users found" 
-            description="We couldn't find any users matching your current search or filter criteria." 
+          <EmptyState
+            title="No users found"
+            description="We couldn't find any users matching your current search or filter criteria."
             onAction={() => setSearchQuery('')}
             actionLabel="Clear Search"
           />
@@ -192,11 +185,11 @@ export const UserManagement: React.FC = () => {
       </div>
 
       {isFormOpen && (
-        <ItemForm 
-          user={editingUser} 
+        <ItemForm
+          user={editingUser}
           isViewOnly={isViewMode}
-          onClose={() => setIsFormOpen(false)} 
-          onSubmit={handleSubmit} 
+          onClose={() => setIsFormOpen(false)}
+          onSubmit={handleSubmit}
         />
       )}
 
@@ -205,7 +198,7 @@ export const UserManagement: React.FC = () => {
         onClose={() => setDeleteConfirm({ isOpen: false, userId: null })}
         onConfirm={handleConfirmDelete}
         title="Delete User"
-        message={`Are you sure you want to delete this user? This action cannot be undone.`}
+        message="Are you sure you want to delete this user? This action cannot be undone."
       />
     </div>
   );
