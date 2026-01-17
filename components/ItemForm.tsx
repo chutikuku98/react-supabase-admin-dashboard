@@ -11,7 +11,7 @@ interface ItemFormProps {
 
 export const ItemForm: React.FC<ItemFormProps> = ({ user, onClose, onSubmit, isViewOnly = false }) => {
   const [formData, setFormData] = useState({
-    name: user?.full_name || '',  // ⬅️ මෙතන change එක
+    name: user?.full_name || '',
     email: user?.email || '',
     role: user?.role || 'User',
     status: user?.status || 'Active',
@@ -24,8 +24,9 @@ export const ItemForm: React.FC<ItemFormProps> = ({ user, onClose, onSubmit, isV
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden slide-in-from-bottom-4 animate-in duration-300">
+    // ⬇️ duration-300 → duration-150, fade-in remove කරන්න
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white">
             {isViewOnly ? 'User Details' : user ? 'Edit User' : 'Add New User'}

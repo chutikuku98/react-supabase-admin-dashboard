@@ -1,20 +1,8 @@
-
 import React, { useState, useRef } from 'react';
 import { X, Upload, Image as ImageIcon } from 'lucide-react';
 import type { Database } from '../supabase-types';
 
 type Product = Database['public']['Tables']['products']['Row'];
-
-
-//interface Product {
-  /*id?: string;
-  name: string;
-  category: string;
-  price: string;
-  stock: number;
-  status: 'In Stock' | 'Low Stock' | 'Out of Stock';
-  image?: string;
-}*/
 
 interface ProductFormProps {
   product?: Product | null;
@@ -53,8 +41,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onClose, onSu
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white">
             {isViewOnly ? 'Product Details' : product ? 'Edit Product' : 'Add New Product'}
@@ -65,7 +53,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onClose, onSu
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-          {/* Image Upload Section */}
           <div className="space-y-1.5">
             <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Product Image</label>
             <div className="flex items-center gap-4">
