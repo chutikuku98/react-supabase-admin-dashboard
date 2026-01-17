@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';  // ⬅️ ADD මේක
 import { DataTable } from '../components/DataTable';
 import { ItemForm } from '../components/ItemForm';
 import { EmptyState } from '../components/EmptyState';
@@ -19,39 +20,51 @@ export const UserManagement: React.FC = () => {
     userId: null,
   });
 
-  // Fetch users from database
   const { data: users = [], isLoading, error } = useQuery({
     queryKey: ['users'],
     queryFn: fetchUsers,
   });
 
-  // Create user mutation
+  // ⬇️ UPDATE මේ mutations 3ම
   const createMutation = useMutation({
     mutationFn: createUser,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setIsFormOpen(false);
+      setEditingUser(null);
+      toast.success('User created successfully!');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to create user: ${error.message}`);
     },
   });
 
-  // Update user mutation
   const updateMutation = useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: Partial<User> }) =>
       updateUser(id, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setIsFormOpen(false);
+      setEditingUser(null);
+      toast.success('User updated successfully!');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to update user: ${error.message}`);
     },
   });
 
-  // Delete user mutation
   const deleteMutation = useMutation({
     mutationFn: deleteUser,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('User deleted successfully!');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to delete user: ${error.message}`);
     },
   });
 
+  // Rest of the code remains same...
   const filteredUsers = users.filter(
     (user) =>
       user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -103,7 +116,6 @@ export const UserManagement: React.FC = () => {
     }
   };
 
-  // Loading state
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -111,8 +123,7 @@ export const UserManagement: React.FC = () => {
       </div>
     );
   }
-
-  // Error state
+  
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">

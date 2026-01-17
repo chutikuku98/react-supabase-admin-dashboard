@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { Toaster } from 'sonner';
 import { Sidebar } from './components/Sidebar';
 import { Navbar } from './components/Navbar';
 import { DashboardHome } from './pages/DashboardHome';
@@ -9,11 +10,10 @@ import { ProductPage } from './pages/ProductPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { SettingsPage } from './pages/SettingsPage';
 
-// React Query client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      staleTime: 5 * 60 * 1000,
       retry: 1,
       refetchOnWindowFocus: false,
     },
@@ -45,6 +45,7 @@ const App: React.FC = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <Toaster position="top-right" richColors closeButton />
       <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors duration-200">
         <Sidebar 
           isOpen={isSidebarOpen} 
