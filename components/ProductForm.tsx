@@ -1,32 +1,36 @@
 
 import React, { useState, useRef } from 'react';
 import { X, Upload, Image as ImageIcon } from 'lucide-react';
+import type { Database } from '../supabase-types';
 
-interface Product {
-  id?: string;
+type Product = Database['public']['Tables']['products']['Row'];
+
+
+//interface Product {
+  /*id?: string;
   name: string;
   category: string;
   price: string;
   stock: number;
   status: 'In Stock' | 'Low Stock' | 'Out of Stock';
   image?: string;
-}
+}*/
 
 interface ProductFormProps {
   product?: Product | null;
   onClose: () => void;
-  onSubmit: (productData: Product) => void;
+  onSubmit: (productData: any) => void;
   isViewOnly?: boolean;
 }
 
 export const ProductForm: React.FC<ProductFormProps> = ({ product, onClose, onSubmit, isViewOnly = false }) => {
-  const [formData, setFormData] = useState<Product>({
+  const [formData, setFormData] = useState({
     name: product?.name || '',
     category: product?.category || 'Accessories',
-    price: product?.price || '$0.00',
+    price: product ? `$${product.price.toFixed(2)}` : '$0.00',
     stock: product?.stock || 0,
     status: product?.status || 'In Stock',
-    image: product?.image || '',
+    image: product?.image_url || '',
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);

@@ -41,6 +41,42 @@ export interface Database {
           updated_at?: string
         }
       }
+      // ⬇️ ADD මේ products type එක
+      products: {
+        Row: {
+          id: string
+          name: string
+          category: string
+          price: number
+          stock: number
+          status: 'In Stock' | 'Low Stock' | 'Out of Stock'
+          image_url: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          category: string
+          price: number
+          stock?: number
+          status?: 'In Stock' | 'Low Stock' | 'Out of Stock'
+          image_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          category?: string
+          price?: number
+          stock?: number
+          status?: 'In Stock' | 'Low Stock' | 'Out of Stock'
+          image_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
   }
 }
