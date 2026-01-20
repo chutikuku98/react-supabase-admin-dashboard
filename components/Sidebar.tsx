@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useAuth } from '../lib/auth/AuthContext';
 import { 
   LayoutDashboard, 
   Users, 
@@ -29,6 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   title,
   logoColor
 }) => {
+  const { signOut } = useAuth();
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     { id: 'users', label: 'Users', icon: <Users size={20} /> },
@@ -36,6 +38,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'analytics', label: 'Analytics', icon: <BarChart3 size={20} /> },
     { id: 'settings', label: 'Settings', icon: <Settings size={20} /> },
   ];
+  const handleLogout = async () => {
+    await signOut();
+  };
 
   return (
     <>
@@ -85,6 +90,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   {item.label}
                 </div>
               )}
+              {/* Authentication collapsed sidebar */}
+              
             </button>
           ))}
         </nav>
@@ -95,6 +102,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <HelpCircle size={20} />
             <span className={`ml-3 font-medium truncate ${isOpen ? 'opacity-100' : 'opacity-0 w-0'}`}>Help Center</span>
           </button>
+          <button 
+          onClick={handleLogout} // ⬅️ UPDATE මේක
+          className="w-full flex items-center px-3 py-2.5 rounded-xl text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-all"
+        ></button>
           <button className="w-full flex items-center px-3 py-2.5 rounded-xl text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-all">
             <LogOut size={20} />
             <span className={`ml-3 font-medium truncate ${isOpen ? 'opacity-100' : 'opacity-0 w-0'}`}>Logout</span>
